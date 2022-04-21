@@ -31,7 +31,7 @@ class Grid{
     }
 
     draw(){
-        ctx.fillStyle = "white";
+        ctx.fillStyle = "black";
         ctx.fillRect(0,0,500,500);
 
  
@@ -51,7 +51,7 @@ class Grid{
             ctx.lineTo(500, row*20);
             ctx.stroke();
         }
-        ctx.fillStyle = "black";
+        ctx.fillStyle = "white";
         ctx.font = "20px Fira Code";
         ctx.beginPath;
         ctx.textAlign = "left";
@@ -59,13 +59,28 @@ class Grid{
         ctx.textAlign = "right";
         ctx.fillText(p2.wins,480,477);
         
-        for(let col = 0; col < this.COLS; col++){
-            for(let row = 0; row < this.ROWS; row++){
+        for(let row = 0; row < this.ROWS; row++){
+            for(let col = 0; col < this.COLS; col++){
+                
                 if(this.grid[row][col] == 1){
-                    ctx.fillStyle = "green";
+                    
+                    if((row % 2 == 0) ^ (col % 2 == 0)){
+                        p1.color = "#FF007F";
+                    }else{
+                        p1.color = "#DA70D6";
+                    }
+                    ctx.fillStyle = p1.color;
                     ctx.fillRect(col*5,row*5,5,5);
+                    
+                    
+                   
                 }else if(this.grid[row][col] == 2){
-                    ctx.fillStyle = "blue";
+                    if((row % 2 == 0) ^ (col % 2 == 0)){
+                        p2.color = "#CD853F";
+                    }else{
+                        p2.color = "#8B4513";
+                    }
+                    ctx.fillStyle = p2.color;
                     ctx.fillRect(col*5,row*5,5,5);
                 }
                 
@@ -77,7 +92,7 @@ class Grid{
 }
 
 class Player{
-    constructor(row,col,d,symbol){
+    constructor(row,col,d,symbol,color){
         this.col = col;
         this.oCol = col;
         //width
@@ -90,6 +105,10 @@ class Player{
         this.symbol = symbol;
 
         this.wins = 0;
+        this.color = color;
+
+        this.invincible = false;
+        this.counter = 0;
     }
 
     restart(){
@@ -124,10 +143,6 @@ class Player{
             g.grid[this.row][this.col] += this.symbol;
         }catch(err){
 
-        }
-        
-        if(this.symbol == 2){
-            console.log(this.row,this.col);
         }
     }
 
@@ -187,26 +202,57 @@ document.addEventListener('keydown', (e) => {
                 p1.d = "l";
             }
             break;
+        case 16:
+            p1.invincible = true;
+            p2.invincible = true;
+            break;
     }
 });
 
-function gameOver(){
+
+class AI extends Player{
+    constructor(row,col,d,symbol){
+        super(row,col,d,symbol);
+    }
+    
+
+    
+}
+
+function gameOver(invincible){
     let p1IsDead = false;
     let p2IsDead = false;
-    if (p1.row == p2.row && p1.col == p2.col) {
-        return [true, true];
-    }
-
+    
     if(p1.row >= 100 || p1.row < 0 || p1.col >= 100 || p1.col < 0){
         p1IsDead = true;
-    }else if(g.grid[p1.row][p1.col] != p1.symbol){
-        p1IsDead = true;
     }
-
-    if(p2.row >= 100 || p2.row < 0 || p2.col >= 100 || p2.col < 0){
+    if(p2.row >= 100 || p2.row < 0 || p2.col >= 100 || p2.col < 0){      
         p2IsDead = true;
-    }else if(g.grid[p2.row][p2.col] != p2.symbol){
-        p2IsDead = true;
+    }
+    
+    if(!invincible){
+        try{
+            if(g.grid[p1.row][p1.col] != p1.symbol){
+                p1IsDead = true;
+            }
+        }catch(err){
+            p1IsDead = true;
+        }
+        
+        try{
+            if(g.grid[p2.row][p2.col] != p2.symbol){
+                p2IsDead = true;
+            }
+        }catch(err){
+            p2IsDead = true;
+        }
+        
+    
+        if (p1.row == p2.row && p1.col == p2.col) {
+            ctx.fillStyle = "red";
+            ctx.fillRect(p1.col*5,p1.row*5,5,5);
+            return [true, true];
+        }
     }
     return [p1IsDead, p2IsDead];
 }
@@ -214,18 +260,36 @@ function gameOver(){
 const c = document.getElementById('myCanvas');
 const ctx = c.getContext('2d');
 const g = new Grid();
-const p1 = new Player(50,10,"r",1);
-const p2 = new Player(50,90,"l",2);
+const p1 = new Player(50,10,"r",1, "#FF007F");
+//const p1 = new AI(50,10,"r",1);
+const p2 = new Player(50,90,"l",2,"#40E0D0");
 
 function gameLoop(){
     g.draw();
     p1.draw();
     p2.draw();
-    p1.move();
+    p1.move(p2);
     p2.move();
-    let temp = gameOver();
+    let invincible = false;
+    if(p1.invincible || p2.invincible){
+        invincible = true;
+        p1.counter ++;
+        p2.counter ++;
+        if(p1.counter == 5){
+            p1.invincible = false;
+            p2.invincible = false;
+            p1.counter = 0;
+            p2.counter = 0;
+        }
+    }
+   
+    let temp = gameOver(invincible);
+    console.log(temp[0]+","+temp[1]);
+
     let p1IsDead = temp[0];
     let p2IsDead = temp[1];
+    
+
     if(p1IsDead || p2IsDead){
         if(p1IsDead && p2IsDead){
             console.log("TIE");
@@ -240,8 +304,9 @@ function gameLoop(){
             inGame = false;
         },1000);
         clearInterval(i);
-
     }
+       
+    
 
     //setTimeout(5000);
     //window.requestAnimationFrame(gameLoop,1000);
@@ -252,7 +317,7 @@ let inGame = false;
 
 function main(){
     inGame = true;
-    i = setInterval(gameLoop,30);
+    i = setInterval(gameLoop,55);
     g.restart();
     p1.restart();
     p2.restart();
@@ -265,4 +330,3 @@ document.addEventListener('keydown', function foo(e){
 });
 
 main();
-
